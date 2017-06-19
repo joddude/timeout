@@ -1,6 +1,10 @@
 #include <windows.h>
 #include <stdio.h>
 
+const int WRONG_INPUT_EXIT_CODE=101;
+const int RUN_ERROR_EXIT_CODE=102;
+const int TIMEOUT_EXIT_CODE=103;
+
 void KillProcessById(DWORD pid) {
     HANDLE hnd;
     hnd = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, TRUE, pid);
@@ -28,38 +32,37 @@ int run(char* command, int ms) {
     )
     {
         printf( "CreateProcess failed (%d).\n", GetLastError() );
-        return -2;
+        return RUN_ERROR_EXIT_CODE;
     }
 
     // Wait until child process exits.
-    if (ms == 0) {
-        WaitForSingleObject( pi.hProcess, INFINITE );
+    DWORD exit_code;
+    DWORD rtn = WaitForSingleObject( pi.hProcess, ms);
+    if (rtn == WAIT_TIMEOUT) {
+        KillProcessById(pi.dwProcessId);
+        exit_code = TIMEOUT_EXIT_CODE;
     } else {
-        DWORD rtn = WaitForSingleObject( pi.hProcess, ms);
-        if (rtn == WAIT_TIMEOUT) {
-            KillProcessById(pi.dwProcessId);
-        }
+        GetExitCodeProcess(pi.hProcess, &exit_code);
     }
     // Close process and thread handles.
     CloseHandle( pi.hProcess );
     CloseHandle( pi.hThread );
-    return 0;
+    return exit_code;
 }
 
 void help() {
-    printf("%s", "Usage: timeout command milliseconds\n");
+    printf("%s", "Usage: timeout milliseconds command\n");
     printf("%s", "Author: https://helloacm.com");
 }
 
 int main(int argc, char** argv) {
-    int rtn = -1;
-    if (argc > 2) {
-        char* command = argv[1];
-        int ms = atoi(argv[2]);
-        // run the command sync
-        rtn = run(command, ms);
+    if (argc == 3) {
+        int ms = atoi(argv[1]);
+        char* command = argv[2];
+        int exit_code = run(command, ms);
+        return exit_code;
     } else {
         help();
+        return WRONG_INPUT_EXIT_CODE;
     }
-    return rtn;
 }
