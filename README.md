@@ -1,4 +1,5 @@
 # timeout
-Windows TimeOut Utility
 
-https://helloacm.com/the-c-windows-command-line-tool-to-wait-and-timeout-on-createprocess/
+Simple windows utility for run program with time limit.
+
+Usage: timeout.exe milliseconds "command"
